@@ -30,7 +30,7 @@ const main = async () => {
   console.log("Deploying to network:", networkName);
 
   // Deploy GdexZapV1
-  console.log("Deploying PancakeZap V1..");
+  console.log("Deploying GdexZap V1..");
 
   const GdexZapV1 = await ethers.getContractFactory("GdexZapV1");
 
@@ -42,7 +42,7 @@ const main = async () => {
 
   await gdexZap.deployed();
 
-  console.log("PancakeZap V1 deployed to:", gdexZap.address);
+  console.log("GdexZap V1 deployed to:", gdexZap.address);
 };
 
 main()

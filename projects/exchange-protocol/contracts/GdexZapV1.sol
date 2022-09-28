@@ -6,14 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {IPancakePair} from "./interfaces/IPancakePair.sol";
+import {IGdexPair} from "./interfaces/IGdexPair.sol";
 import {IGdexRouter02} from "./interfaces/IGdexRouter02.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {Babylonian} from "./libraries/Babylonian.sol";
 
 /*
  * @author Inspiration from the work of Zapper and Beefy.
- * Implemented and modified by PancakeSwap teams.
+ * Implemented and modified by GdexSwap teams.
  */
 contract GdexZapV1 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -27,7 +27,7 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
     // Maximum integer (used for managing allowance)
     uint256 public constant MAX_INT = 2**256 - 1;
 
-    // Minimum amount for a swap (derived from PancakeSwap)
+    // Minimum amount for a swap (derived from GdexSwap)
     uint256 public constant MINIMUM_AMOUNT = 1000;
 
     // Maximum reverse zap ratio (100 --> 1%, 1000 --> 0.1%)
@@ -338,13 +338,13 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
             address swapTokenOut
         )
     {
-        address token0 = IPancakePair(_lpToken).token0();
-        address token1 = IPancakePair(_lpToken).token1();
+        address token0 = IGdexPair(_lpToken).token0();
+        address token1 = IGdexPair(_lpToken).token1();
 
         require(_tokenToZap == token0 || _tokenToZap == token1, "Zap: Wrong tokens");
 
         // Convert to uint256 (from uint112)
-        (uint256 reserveA, uint256 reserveB, ) = IPancakePair(_lpToken).getReserves();
+        (uint256 reserveA, uint256 reserveB, ) = IGdexPair(_lpToken).getReserves();
 
         if (token0 == _tokenToZap) {
             swapTokenOut = token1;
@@ -387,20 +387,20 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
         )
     {
         require(
-            _token0ToZap == IPancakePair(_lpToken).token0() || _token0ToZap == IPancakePair(_lpToken).token1(),
+            _token0ToZap == IGdexPair(_lpToken).token0() || _token0ToZap == IGdexPair(_lpToken).token1(),
             "Zap: Wrong token0"
         );
         require(
-            _token1ToZap == IPancakePair(_lpToken).token0() || _token1ToZap == IPancakePair(_lpToken).token1(),
+            _token1ToZap == IGdexPair(_lpToken).token0() || _token1ToZap == IGdexPair(_lpToken).token1(),
             "Zap: Wrong token1"
         );
 
         require(_token0ToZap != _token1ToZap, "Zap: Same tokens");
 
         // Convert to uint256 (from uint112)
-        (uint256 reserveA, uint256 reserveB, ) = IPancakePair(_lpToken).getReserves();
+        (uint256 reserveA, uint256 reserveB, ) = IGdexPair(_lpToken).getReserves();
 
-        if (_token0ToZap == IPancakePair(_lpToken).token0()) {
+        if (_token0ToZap == IGdexPair(_lpToken).token0()) {
             sellToken0 = (_token0AmountIn * reserveB > _token1AmountIn * reserveA) ? true : false;
 
             // Calculate the amount that is expected to be swapped
@@ -463,17 +463,17 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
             address swapTokenOut
         )
     {
-        address token0 = IPancakePair(_lpToken).token0();
-        address token1 = IPancakePair(_lpToken).token1();
+        address token0 = IGdexPair(_lpToken).token0();
+        address token1 = IGdexPair(_lpToken).token1();
 
         require(_tokenToReceive == token0 || _tokenToReceive == token1, "Zap: Token not in LP");
 
         // Convert to uint256 (from uint112)
-        (uint256 reserveA, uint256 reserveB, ) = IPancakePair(_lpToken).getReserves();
+        (uint256 reserveA, uint256 reserveB, ) = IGdexPair(_lpToken).getReserves();
 
         if (token1 == _tokenToReceive) {
             // sell token0
-            uint256 tokenAmountIn = (_lpTokenAmount * reserveA) / IPancakePair(_lpToken).totalSupply();
+            uint256 tokenAmountIn = (_lpTokenAmount * reserveA) / IGdexPair(_lpToken).totalSupply();
 
             swapAmountIn = _calculateAmountToSwap(tokenAmountIn, reserveA, reserveB);
             swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
@@ -481,7 +481,7 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
             swapTokenOut = token0;
         } else {
             // sell token1
-            uint256 tokenAmountIn = (_lpTokenAmount * reserveB) / IPancakePair(_lpToken).totalSupply();
+            uint256 tokenAmountIn = (_lpTokenAmount * reserveB) / IGdexPair(_lpToken).totalSupply();
 
             swapAmountIn = _calculateAmountToSwap(tokenAmountIn, reserveB, reserveA);
             swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
@@ -507,8 +507,8 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
     ) internal returns (uint256 lpTokenReceived) {
         require(_tokenAmountIn >= MINIMUM_AMOUNT, "Zap: Amount too low");
 
-        address token0 = IPancakePair(_lpToken).token0();
-        address token1 = IPancakePair(_lpToken).token1();
+        address token0 = IGdexPair(_lpToken).token0();
+        address token1 = IGdexPair(_lpToken).token1();
 
         require(_tokenToZap == token0 || _tokenToZap == token1, "Zap: Wrong tokens");
 
@@ -521,7 +521,7 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
 
         {
             // Convert to uint256 (from uint112)
-            (uint256 reserveA, uint256 reserveB, ) = IPancakePair(_lpToken).getReserves();
+            (uint256 reserveA, uint256 reserveB, ) = IGdexPair(_lpToken).getReserves();
 
             require((reserveA >= MINIMUM_AMOUNT) && (reserveB >= MINIMUM_AMOUNT), "Zap: Reserves too low");
 
@@ -591,11 +591,11 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
         bool _isToken0Sold
     ) internal returns (uint256 lpTokenReceived) {
         require(
-            _token0ToZap == IPancakePair(_lpToken).token0() || _token0ToZap == IPancakePair(_lpToken).token1(),
+            _token0ToZap == IGdexPair(_lpToken).token0() || _token0ToZap == IGdexPair(_lpToken).token1(),
             "Zap: Wrong token0"
         );
         require(
-            _token1ToZap == IPancakePair(_lpToken).token0() || _token1ToZap == IPancakePair(_lpToken).token1(),
+            _token1ToZap == IGdexPair(_lpToken).token0() || _token1ToZap == IGdexPair(_lpToken).token1(),
             "Zap: Wrong token1"
         );
 
@@ -606,11 +606,11 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
 
         {
             // Convert to uint256 (from uint112)
-            (uint256 reserveA, uint256 reserveB, ) = IPancakePair(_lpToken).getReserves();
+            (uint256 reserveA, uint256 reserveB, ) = IGdexPair(_lpToken).getReserves();
 
             require((reserveA >= MINIMUM_AMOUNT) && (reserveB >= MINIMUM_AMOUNT), "Zap: Reserves too low");
 
-            if (_token0ToZap == IPancakePair(_lpToken).token0()) {
+            if (_token0ToZap == IGdexPair(_lpToken).token0()) {
                 swapAmountIn = _calculateAmountToSwapForRebalancing(
                     _token0AmountIn,
                     _token1AmountIn,
@@ -698,13 +698,13 @@ contract GdexZapV1 is Ownable, ReentrancyGuard {
         address _tokenToReceive,
         uint256 _tokenAmountOutMin
     ) internal returns (uint256) {
-        address token0 = IPancakePair(_lpToken).token0();
-        address token1 = IPancakePair(_lpToken).token1();
+        address token0 = IGdexPair(_lpToken).token0();
+        address token1 = IGdexPair(_lpToken).token1();
 
         require(_tokenToReceive == token0 || _tokenToReceive == token1, "Zap: Token not in LP");
 
         // Burn all LP tokens to receive the two tokens to this address
-        (uint256 amount0, uint256 amount1) = IPancakePair(_lpToken).burn(address(this));
+        (uint256 amount0, uint256 amount1) = IGdexPair(_lpToken).burn(address(this));
 
         require(amount0 >= MINIMUM_AMOUNT, "GdexRouter: INSUFFICIENT_A_AMOUNT");
         require(amount1 >= MINIMUM_AMOUNT, "GdexRouter: INSUFFICIENT_B_AMOUNT");

@@ -4,8 +4,8 @@ import { assert, expect } from "chai";
 import { BN, constants, expectEvent, expectRevert, time } from "@openzeppelin/test-helpers";
 
 const MockERC20 = artifacts.require("./utils/MockERC20.sol");
-const PancakeFactory = artifacts.require("./PancakeFactory.sol");
-const PancakePair = artifacts.require("./PancakePair.sol");
+const GdexFactory = artifacts.require("./GdexFactory.sol");
+const GdexPair = artifacts.require("./GdexPair.sol");
 const GdexRouter = artifacts.require("./GdexRouter.sol");
 const GdexZapV1 = artifacts.require("./GdexZapV1.sol");
 const WBNB = artifacts.require("./WBNB.sol");
@@ -24,7 +24,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
   before(async () => {
     // Deploy Factory
-    pancakeFactory = await PancakeFactory.new(alice, { from: alice });
+    pancakeFactory = await GdexFactory.new(alice, { from: alice });
 
     // Deploy Wrapped BNB
     wrappedBNB = await WBNB.new({ from: alice });
@@ -42,13 +42,13 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
     // Create 3 LP tokens
     let result = await pancakeFactory.createPair(tokenA.address, wrappedBNB.address, { from: alice });
-    pairAB = await PancakePair.at(result.logs[0].args[2]);
+    pairAB = await GdexPair.at(result.logs[0].args[2]);
 
     result = await pancakeFactory.createPair(wrappedBNB.address, tokenC.address, { from: alice });
-    pairBC = await PancakePair.at(result.logs[0].args[2]);
+    pairBC = await GdexPair.at(result.logs[0].args[2]);
 
     result = await pancakeFactory.createPair(tokenA.address, tokenC.address, { from: alice });
-    pairAC = await PancakePair.at(result.logs[0].args[2]);
+    pairAC = await GdexPair.at(result.logs[0].args[2]);
 
     assert.equal(String(await pairAB.totalSupply()), parseEther("0").toString());
     assert.equal(String(await pairBC.totalSupply()), parseEther("0").toString());
@@ -100,7 +100,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
   describe("Normal cases for liquidity provision and zap ins", async () => {
     it("User adds liquidity to LP tokens", async function () {
       const deadline = new BN(await time.latest()).add(new BN("100"));
-      /* Add liquidity (Pancake Router)
+      /* Add liquidity (Gdex Router)
        * address tokenB,
        * uint256 amountADesired,
        * uint256 amountBDesired,

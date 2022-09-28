@@ -4,8 +4,8 @@ pragma solidity =0.6.6;
 import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 
 import "./interfaces/IGdexRouter02.sol";
-import "./interfaces/IPancakeFactory.sol";
-import "./libraries/PancakeLibrary.sol";
+import "./interfaces/IGdexFactory.sol";
+import "./libraries/GdexLibrary.sol";
 import "./libraries/SafeMath.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IWETH.sol";
@@ -40,19 +40,19 @@ contract GdexRouter is IGdexRouter02 {
         uint256 amountBMin
     ) internal virtual returns (uint256 amountA, uint256 amountB) {
         // create the pair if it doesn't exist yet
-        if (IPancakeFactory(factory).getPair(tokenA, tokenB) == address(0)) {
-            IPancakeFactory(factory).createPair(tokenA, tokenB);
+        if (IGdexFactory(factory).getPair(tokenA, tokenB) == address(0)) {
+            IGdexFactory(factory).createPair(tokenA, tokenB);
         }
-        (uint256 reserveA, uint256 reserveB) = PancakeLibrary.getReserves(factory, tokenA, tokenB);
+        (uint256 reserveA, uint256 reserveB) = GdexLibrary.getReserves(factory, tokenA, tokenB);
         if (reserveA == 0 && reserveB == 0) {
             (amountA, amountB) = (amountADesired, amountBDesired);
         } else {
-            uint256 amountBOptimal = PancakeLibrary.quote(amountADesired, reserveA, reserveB);
+            uint256 amountBOptimal = GdexLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
                 require(amountBOptimal >= amountBMin, "GdexRouter: INSUFFICIENT_B_AMOUNT");
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
-                uint256 amountAOptimal = PancakeLibrary.quote(amountBDesired, reserveB, reserveA);
+                uint256 amountAOptimal = GdexLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
                 require(amountAOptimal >= amountAMin, "GdexRouter: INSUFFICIENT_A_AMOUNT");
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
@@ -81,10 +81,10 @@ contract GdexRouter is IGdexRouter02 {
         )
     {
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
-        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = GdexLibrary.pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        liquidity = IPancakePair(pair).mint(to);
+        liquidity = IGdexPair(pair).mint(to);
     }
 
     function addLiquidityETH(
@@ -114,11 +114,11 @@ contract GdexRouter is IGdexRouter02 {
             amountTokenMin,
             amountETHMin
         );
-        address pair = PancakeLibrary.pairFor(factory, token, WETH);
+        address pair = GdexLibrary.pairFor(factory, token, WETH);
         TransferHelper.safeTransferFrom(token, msg.sender, pair, amountToken);
         IWETH(WETH).deposit{value: amountETH}();
         assert(IWETH(WETH).transfer(pair, amountETH));
-        liquidity = IPancakePair(pair).mint(to);
+        liquidity = IGdexPair(pair).mint(to);
         // refund dust eth, if any
         if (msg.value > amountETH) TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
     }
@@ -133,10 +133,10 @@ contract GdexRouter is IGdexRouter02 {
         address to,
         uint256 deadline
     ) public virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB) {
-        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
-        IPancakePair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        (uint256 amount0, uint256 amount1) = IPancakePair(pair).burn(to);
-        (address token0, ) = PancakeLibrary.sortTokens(tokenA, tokenB);
+        address pair = GdexLibrary.pairFor(factory, tokenA, tokenB);
+        IGdexPair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
+        (uint256 amount0, uint256 amount1) = IGdexPair(pair).burn(to);
+        (address token0, ) = GdexLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
         require(amountA >= amountAMin, "GdexRouter: INSUFFICIENT_A_AMOUNT");
         require(amountB >= amountBMin, "GdexRouter: INSUFFICIENT_B_AMOUNT");
@@ -177,9 +177,9 @@ contract GdexRouter is IGdexRouter02 {
         bytes32 r,
         bytes32 s
     ) external virtual override returns (uint256 amountA, uint256 amountB) {
-        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
+        address pair = GdexLibrary.pairFor(factory, tokenA, tokenB);
         uint256 value = approveMax ? uint256(-1) : liquidity;
-        IPancakePair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IGdexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountA, amountB) = removeLiquidity(tokenA, tokenB, liquidity, amountAMin, amountBMin, to, deadline);
     }
 
@@ -195,9 +195,9 @@ contract GdexRouter is IGdexRouter02 {
         bytes32 r,
         bytes32 s
     ) external virtual override returns (uint256 amountToken, uint256 amountETH) {
-        address pair = PancakeLibrary.pairFor(factory, token, WETH);
+        address pair = GdexLibrary.pairFor(factory, token, WETH);
         uint256 value = approveMax ? uint256(-1) : liquidity;
-        IPancakePair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IGdexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         (amountToken, amountETH) = removeLiquidityETH(token, liquidity, amountTokenMin, amountETHMin, to, deadline);
     }
 
@@ -228,9 +228,9 @@ contract GdexRouter is IGdexRouter02 {
         bytes32 r,
         bytes32 s
     ) external virtual override returns (uint256 amountETH) {
-        address pair = PancakeLibrary.pairFor(factory, token, WETH);
+        address pair = GdexLibrary.pairFor(factory, token, WETH);
         uint256 value = approveMax ? uint256(-1) : liquidity;
-        IPancakePair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
+        IGdexPair(pair).permit(msg.sender, address(this), value, deadline, v, r, s);
         amountETH = removeLiquidityETHSupportingFeeOnTransferTokens(
             token,
             liquidity,
@@ -250,12 +250,12 @@ contract GdexRouter is IGdexRouter02 {
     ) internal virtual {
         for (uint256 i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0, ) = PancakeLibrary.sortTokens(input, output);
+            (address token0, ) = GdexLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
             (uint256 amount0Out, uint256 amount1Out) =
                 input == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
-            address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
-            IPancakePair(PancakeLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
+            address to = i < path.length - 2 ? GdexLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            IGdexPair(GdexLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
 
@@ -266,12 +266,12 @@ contract GdexRouter is IGdexRouter02 {
         address to,
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
+        amounts = GdexLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, "GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, to);
@@ -284,12 +284,12 @@ contract GdexRouter is IGdexRouter02 {
         address to,
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = GdexLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, "GdexRouter: EXCESSIVE_INPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, to);
@@ -302,10 +302,10 @@ contract GdexRouter is IGdexRouter02 {
         uint256 deadline
     ) external payable virtual override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[0] == WETH, "GdexRouter: INVALID_PATH");
-        amounts = PancakeLibrary.getAmountsOut(factory, msg.value, path);
+        amounts = GdexLibrary.getAmountsOut(factory, msg.value, path);
         require(amounts[amounts.length - 1] >= amountOutMin, "GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        assert(IWETH(WETH).transfer(GdexLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
     }
 
@@ -317,12 +317,12 @@ contract GdexRouter is IGdexRouter02 {
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[path.length - 1] == WETH, "GdexRouter: INVALID_PATH");
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = GdexLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= amountInMax, "GdexRouter: EXCESSIVE_INPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, address(this));
@@ -338,12 +338,12 @@ contract GdexRouter is IGdexRouter02 {
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[path.length - 1] == WETH, "GdexRouter: INVALID_PATH");
-        amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
+        amounts = GdexLibrary.getAmountsOut(factory, amountIn, path);
         require(amounts[amounts.length - 1] >= amountOutMin, "GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amounts[0]
         );
         _swap(amounts, path, address(this));
@@ -358,10 +358,10 @@ contract GdexRouter is IGdexRouter02 {
         uint256 deadline
     ) external payable virtual override ensure(deadline) returns (uint256[] memory amounts) {
         require(path[0] == WETH, "GdexRouter: INVALID_PATH");
-        amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        amounts = GdexLibrary.getAmountsIn(factory, amountOut, path);
         require(amounts[0] <= msg.value, "GdexRouter: EXCESSIVE_INPUT_AMOUNT");
         IWETH(WETH).deposit{value: amounts[0]}();
-        assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
+        assert(IWETH(WETH).transfer(GdexLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
         // refund dust eth, if any
         if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
@@ -372,8 +372,8 @@ contract GdexRouter is IGdexRouter02 {
     function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
         for (uint256 i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
-            (address token0, ) = PancakeLibrary.sortTokens(input, output);
-            IPancakePair pair = IPancakePair(PancakeLibrary.pairFor(factory, input, output));
+            (address token0, ) = GdexLibrary.sortTokens(input, output);
+            IGdexPair pair = IGdexPair(GdexLibrary.pairFor(factory, input, output));
             uint256 amountInput;
             uint256 amountOutput;
             {
@@ -382,11 +382,11 @@ contract GdexRouter is IGdexRouter02 {
                 (uint256 reserveInput, uint256 reserveOutput) =
                     input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
                 amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
-                amountOutput = PancakeLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
+                amountOutput = GdexLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
             (uint256 amount0Out, uint256 amount1Out) =
                 input == token0 ? (uint256(0), amountOutput) : (amountOutput, uint256(0));
-            address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
+            address to = i < path.length - 2 ? GdexLibrary.pairFor(factory, output, path[i + 2]) : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
@@ -401,7 +401,7 @@ contract GdexRouter is IGdexRouter02 {
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amountIn
         );
         uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
@@ -421,7 +421,7 @@ contract GdexRouter is IGdexRouter02 {
         require(path[0] == WETH, "GdexRouter: INVALID_PATH");
         uint256 amountIn = msg.value;
         IWETH(WETH).deposit{value: amountIn}();
-        assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amountIn));
+        assert(IWETH(WETH).transfer(GdexLibrary.pairFor(factory, path[0], path[1]), amountIn));
         uint256 balanceBefore = IERC20(path[path.length - 1]).balanceOf(to);
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
@@ -441,7 +441,7 @@ contract GdexRouter is IGdexRouter02 {
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
-            PancakeLibrary.pairFor(factory, path[0], path[1]),
+            GdexLibrary.pairFor(factory, path[0], path[1]),
             amountIn
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
@@ -457,7 +457,7 @@ contract GdexRouter is IGdexRouter02 {
         uint256 reserveA,
         uint256 reserveB
     ) public pure virtual override returns (uint256 amountB) {
-        return PancakeLibrary.quote(amountA, reserveA, reserveB);
+        return GdexLibrary.quote(amountA, reserveA, reserveB);
     }
 
     function getAmountOut(
@@ -465,7 +465,7 @@ contract GdexRouter is IGdexRouter02 {
         uint256 reserveIn,
         uint256 reserveOut
     ) public pure virtual override returns (uint256 amountOut) {
-        return PancakeLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
+        return GdexLibrary.getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
     function getAmountIn(
@@ -473,7 +473,7 @@ contract GdexRouter is IGdexRouter02 {
         uint256 reserveIn,
         uint256 reserveOut
     ) public pure virtual override returns (uint256 amountIn) {
-        return PancakeLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
+        return GdexLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
     }
 
     function getAmountsOut(uint256 amountIn, address[] memory path)
@@ -483,7 +483,7 @@ contract GdexRouter is IGdexRouter02 {
         override
         returns (uint256[] memory amounts)
     {
-        return PancakeLibrary.getAmountsOut(factory, amountIn, path);
+        return GdexLibrary.getAmountsOut(factory, amountIn, path);
     }
 
     function getAmountsIn(uint256 amountOut, address[] memory path)
@@ -493,6 +493,6 @@ contract GdexRouter is IGdexRouter02 {
         override
         returns (uint256[] memory amounts)
     {
-        return PancakeLibrary.getAmountsIn(factory, amountOut, path);
+        return GdexLibrary.getAmountsIn(factory, amountOut, path);
     }
 }
