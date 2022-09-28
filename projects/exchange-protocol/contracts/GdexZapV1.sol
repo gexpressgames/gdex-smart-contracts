@@ -15,7 +15,7 @@ import {Babylonian} from "./libraries/Babylonian.sol";
  * @author Inspiration from the work of Zapper and Beefy.
  * Implemented and modified by PancakeSwap teams.
  */
-contract PancakeZapV1 is Ownable, ReentrancyGuard {
+contract GdexZapV1 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Interface for Wrapped BNB (WBNB)

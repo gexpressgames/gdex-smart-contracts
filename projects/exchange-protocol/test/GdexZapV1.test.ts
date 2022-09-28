@@ -7,16 +7,16 @@ const MockERC20 = artifacts.require("./utils/MockERC20.sol");
 const PancakeFactory = artifacts.require("./PancakeFactory.sol");
 const PancakePair = artifacts.require("./PancakePair.sol");
 const GdexRouter = artifacts.require("./GdexRouter.sol");
-const PancakeZapV1 = artifacts.require("./PancakeZapV1.sol");
+const GdexZapV1 = artifacts.require("./GdexZapV1.sol");
 const WBNB = artifacts.require("./WBNB.sol");
 
-contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
+contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
   let maxZapReverseRatio;
   let pairAB;
   let pairBC;
   let pairAC;
   let pancakeZap;
-  let gdexRouter;
+  let gdec;
   let pancakeFactory;
   let tokenA;
   let tokenC;
@@ -30,11 +30,11 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
     wrappedBNB = await WBNB.new({ from: alice });
 
     // Deploy Router
-    gdexRouter = await GdexRouter.new(pancakeFactory.address, wrappedBNB.address, { from: alice });
+    gdec = await GdexRouter.new(pancakeFactory.address, wrappedBNB.address, { from: alice });
 
     // Deploy ZapV1
     maxZapReverseRatio = 100; // 1%
-    pancakeZap = await PancakeZapV1.new(wrappedBNB.address, gdexRouter.address, maxZapReverseRatio, { from: alice });
+    pancakeZap = await GdexZapV1.new(wrappedBNB.address, gdec.address, maxZapReverseRatio, { from: alice });
 
     // Deploy ERC20s
     tokenA = await MockERC20.new("Token A", "TA", parseEther("10000000"), { from: alice });
@@ -59,7 +59,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
       await tokenA.mintTokens(parseEther("2000000"), { from: thisUser });
       await tokenC.mintTokens(parseEther("2000000"), { from: thisUser });
 
-      await tokenA.approve(gdexRouter.address, constants.MAX_UINT256, {
+      await tokenA.approve(gdec.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
@@ -67,7 +67,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
         from: thisUser,
       });
 
-      await tokenC.approve(gdexRouter.address, constants.MAX_UINT256, {
+      await tokenC.approve(gdec.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
@@ -75,7 +75,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
         from: thisUser,
       });
 
-      await wrappedBNB.approve(gdexRouter.address, constants.MAX_UINT256, {
+      await wrappedBNB.approve(gdec.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
@@ -111,7 +111,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
        */
 
       // 1 A = 1 C
-      let result = await gdexRouter.addLiquidity(
+      let result = await gdec.addLiquidity(
         tokenC.address,
         tokenA.address,
         parseEther("1000000"), // 1M token A
@@ -140,7 +140,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
       assert.equal(String(await tokenC.balanceOf(pairAC.address)), parseEther("1000000").toString());
 
       // 1 BNB = 100 A
-      result = await gdexRouter.addLiquidityETH(
+      result = await gdec.addLiquidityETH(
         tokenA.address,
         parseEther("100000"), // 100k token A
         parseEther("100000"), // 100k token A
@@ -161,7 +161,7 @@ contract("PancakeZapV1", ([alice, bob, carol, david, erin]) => {
       assert.equal(String(await tokenA.balanceOf(pairAB.address)), parseEther("100000").toString());
 
       // 1 BNB = 100 C
-      result = await gdexRouter.addLiquidityETH(
+      result = await gdec.addLiquidityETH(
         tokenC.address,
         parseEther("100000"), // 100k token C
         parseEther("100000"), // 100k token C

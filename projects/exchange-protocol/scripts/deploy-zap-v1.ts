@@ -19,7 +19,7 @@ const main = async () => {
     }
   }
 
-  if (!config.PancakeRouter[networkName] || config.PancakeRouter[networkName] === ethers.constants.AddressZero) {
+  if (!config.GdexRouter[networkName] || config.GdexRouter[networkName] === ethers.constants.AddressZero) {
     throw new Error("Missing router address, refer to README 'Deployment' section");
   }
 
@@ -29,20 +29,20 @@ const main = async () => {
 
   console.log("Deploying to network:", networkName);
 
-  // Deploy PancakeZapV1
+  // Deploy GdexZapV1
   console.log("Deploying PancakeZap V1..");
 
-  const PancakeZapV1 = await ethers.getContractFactory("PancakeZapV1");
+  const GdexZapV1 = await ethers.getContractFactory("GdexZapV1");
 
-  const pancakeZap = await PancakeZapV1.deploy(
+  const gdexZap = await GdexZapV1.deploy(
     config.WBNB[networkName],
-    config.PancakeRouter[networkName],
+    config.GdexRouter[networkName],
     config.MaxZapReverseRatio[networkName]
   );
 
-  await pancakeZap.deployed();
+  await gdexZap.deployed();
 
-  console.log("PancakeZap V1 deployed to:", pancakeZap.address);
+  console.log("PancakeZap V1 deployed to:", gdexZap.address);
 };
 
 main()
