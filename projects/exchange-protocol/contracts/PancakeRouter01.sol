@@ -4,12 +4,12 @@ pragma solidity =0.6.6;
 import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 
 import './libraries/PancakeLibrary.sol';
-import './interfaces/IPancakeRouter01.sol';
+import './interfaces/IGdexRouter01.sol';
 import './interfaces/IPancakeFactory.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
-contract PancakeRouter01 is IPancakeRouter01 {
+contract PancakeRouter01 is IGdexRouter01 {
     address public immutable override factory;
     address public immutable override WETH;
 
