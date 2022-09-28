@@ -7,7 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {IPancakePair} from "./interfaces/IPancakePair.sol";
-import {IPancakeRouter02} from "./interfaces/IPancakeRouter02.sol";
+import {IGdexRouter02} from "./interfaces/IGdexRouter02.sol";
 import {IWETH} from "./interfaces/IWETH.sol";
 import {Babylonian} from "./libraries/Babylonian.sol";
 
@@ -21,8 +21,8 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
     // Interface for Wrapped BNB (WBNB)
     IWETH public WBNB;
 
-    // PancakeRouter interface
-    IPancakeRouter02 public pancakeRouter;
+    // GdexRouter interface
+    IGdexRouter02 public gdexRouter;
 
     // Maximum integer (used for managing allowance)
     uint256 public constant MAX_INT = 2**256 - 1;
@@ -33,8 +33,8 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
     // Maximum reverse zap ratio (100 --> 1%, 1000 --> 0.1%)
     uint256 public maxZapReverseRatio;
 
-    // Address PancakeRouter
-    address private pancakeRouterAddress;
+    // Address gdexRouter
+    address private gdexRouterAddress;
 
     // Address Wrapped BNB (WBNB)
     address private WBNBAddress;
@@ -84,18 +84,18 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
     /*
      * @notice Constructor
      * @param _WBNBAddress: address of the WBNB contract
-     * @param _pancakeRouter: address of the PancakeRouter
+     * @param _gdexRouter: address of the GdexRouter
      * @param _maxZapReverseRatio: maximum zap ratio
      */
     constructor(
         address _WBNBAddress,
-        address _pancakeRouter,
+        address _gdexRouter,
         uint256 _maxZapReverseRatio
     ) {
         WBNBAddress = _WBNBAddress;
         WBNB = IWETH(_WBNBAddress);
-        pancakeRouterAddress = _pancakeRouter;
-        pancakeRouter = IPancakeRouter02(_pancakeRouter);
+        gdexRouterAddress = _gdexRouter;
+        gdexRouter = IGdexRouter02(_gdexRouter);
         maxZapReverseRatio = _maxZapReverseRatio;
     }
 
@@ -349,11 +349,11 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         if (token0 == _tokenToZap) {
             swapTokenOut = token1;
             swapAmountIn = _calculateAmountToSwap(_tokenAmountIn, reserveA, reserveB);
-            swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
+            swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
         } else {
             swapTokenOut = token0;
             swapAmountIn = _calculateAmountToSwap(_tokenAmountIn, reserveB, reserveA);
-            swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
+            swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
         }
 
         return (swapAmountIn, swapAmountOut, swapTokenOut);
@@ -414,9 +414,9 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
 
             // Calculate the amount expected to be received in the intermediary swap
             if (sellToken0) {
-                swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
+                swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
             } else {
-                swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
+                swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
             }
         } else {
             sellToken0 = (_token0AmountIn * reserveA > _token1AmountIn * reserveB) ? true : false;
@@ -431,9 +431,9 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
 
             // Calculate the amount expected to be received in the intermediary swap
             if (sellToken0) {
-                swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
+                swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
             } else {
-                swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
+                swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
             }
         }
 
@@ -476,7 +476,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
             uint256 tokenAmountIn = (_lpTokenAmount * reserveA) / IPancakePair(_lpToken).totalSupply();
 
             swapAmountIn = _calculateAmountToSwap(tokenAmountIn, reserveA, reserveB);
-            swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
+            swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveA, reserveB);
 
             swapTokenOut = token0;
         } else {
@@ -484,7 +484,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
             uint256 tokenAmountIn = (_lpTokenAmount * reserveB) / IPancakePair(_lpToken).totalSupply();
 
             swapAmountIn = _calculateAmountToSwap(tokenAmountIn, reserveB, reserveA);
-            swapAmountOut = pancakeRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
+            swapAmountOut = gdexRouter.getAmountOut(swapAmountIn, reserveB, reserveA);
 
             swapTokenOut = token1;
         }
@@ -539,7 +539,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         // Approve token to zap if necessary
         _approveTokenIfNeeded(_tokenToZap);
 
-        uint256[] memory swapedAmounts = pancakeRouter.swapExactTokensForTokens(
+        uint256[] memory swapedAmounts = gdexRouter.swapExactTokensForTokens(
             swapAmountIn,
             _tokenAmountOutMin,
             path,
@@ -555,7 +555,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         }
 
         // Add liquidity and retrieve the amount of LP received by the sender
-        (, , lpTokenReceived) = pancakeRouter.addLiquidity(
+        (, , lpTokenReceived) = gdexRouter.addLiquidity(
             path[0],
             path[1],
             _tokenAmountIn - swapedAmounts[0],
@@ -648,7 +648,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         }
 
         // Execute the swap and retrieve quantity received
-        uint256[] memory swapedAmounts = pancakeRouter.swapExactTokensForTokens(
+        uint256[] memory swapedAmounts = gdexRouter.swapExactTokensForTokens(
             swapAmountIn,
             _tokenAmountOutMin,
             path,
@@ -660,7 +660,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         if (_isToken0Sold) {
             _approveTokenIfNeeded(_token1ToZap);
 
-            (, , lpTokenReceived) = pancakeRouter.addLiquidity(
+            (, , lpTokenReceived) = gdexRouter.addLiquidity(
                 path[0],
                 path[1],
                 (_token0AmountIn - swapedAmounts[0]),
@@ -672,7 +672,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
             );
         } else {
             _approveTokenIfNeeded(_token0ToZap);
-            (, , lpTokenReceived) = pancakeRouter.addLiquidity(
+            (, , lpTokenReceived) = gdexRouter.addLiquidity(
                 path[0],
                 path[1],
                 (_token1AmountIn - swapedAmounts[0]),
@@ -706,8 +706,8 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         // Burn all LP tokens to receive the two tokens to this address
         (uint256 amount0, uint256 amount1) = IPancakePair(_lpToken).burn(address(this));
 
-        require(amount0 >= MINIMUM_AMOUNT, "PancakeRouter: INSUFFICIENT_A_AMOUNT");
-        require(amount1 >= MINIMUM_AMOUNT, "PancakeRouter: INSUFFICIENT_B_AMOUNT");
+        require(amount0 >= MINIMUM_AMOUNT, "GdexRouter: INSUFFICIENT_A_AMOUNT");
+        require(amount1 >= MINIMUM_AMOUNT, "GdexRouter: INSUFFICIENT_B_AMOUNT");
 
         address[] memory path = new address[](2);
         path[1] = _tokenToReceive;
@@ -729,7 +729,7 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         }
 
         // Swap tokens
-        pancakeRouter.swapExactTokensForTokens(swapAmountIn, _tokenAmountOutMin, path, address(this), block.timestamp);
+        gdexRouter.swapExactTokensForTokens(swapAmountIn, _tokenAmountOutMin, path, address(this), block.timestamp);
 
         // Return full balance for the token to receive by the sender
         return IERC20(_tokenToReceive).balanceOf(address(this));
@@ -740,9 +740,9 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
      * @param _token: token address
      */
     function _approveTokenIfNeeded(address _token) private {
-        if (IERC20(_token).allowance(address(this), pancakeRouterAddress) < 1e24) {
+        if (IERC20(_token).allowance(address(this), gdexRouterAddress) < 1e24) {
             // Re-approve
-            IERC20(_token).safeApprove(pancakeRouterAddress, MAX_INT);
+            IERC20(_token).safeApprove(gdexRouterAddress, MAX_INT);
         }
     }
 
@@ -759,8 +759,8 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
         uint256 _reserve1
     ) private view returns (uint256 amountToSwap) {
         uint256 halfToken0Amount = _token0AmountIn / 2;
-        uint256 nominator = pancakeRouter.getAmountOut(halfToken0Amount, _reserve0, _reserve1);
-        uint256 denominator = pancakeRouter.quote(
+        uint256 nominator = gdexRouter.getAmountOut(halfToken0Amount, _reserve0, _reserve1);
+        uint256 denominator = gdexRouter.quote(
             halfToken0Amount,
             _reserve0 + halfToken0Amount,
             _reserve1 - nominator
@@ -796,8 +796,8 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
 
         if (sellToken0) {
             uint256 token0AmountToSell = (_token0AmountIn - (_token1AmountIn * _reserve0) / _reserve1) / 2;
-            uint256 nominator = pancakeRouter.getAmountOut(token0AmountToSell, _reserve0, _reserve1);
-            uint256 denominator = pancakeRouter.quote(
+            uint256 nominator = gdexRouter.getAmountOut(token0AmountToSell, _reserve0, _reserve1);
+            uint256 denominator = gdexRouter.quote(
                 token0AmountToSell,
                 _reserve0 + token0AmountToSell,
                 _reserve1 - nominator
@@ -815,9 +815,9 @@ contract PancakeZapV1 is Ownable, ReentrancyGuard {
                 Babylonian.sqrt((token0AmountToSell * token0AmountToSell * nominator) / denominator);
         } else {
             uint256 token1AmountToSell = (_token1AmountIn - (_token0AmountIn * _reserve1) / _reserve0) / 2;
-            uint256 nominator = pancakeRouter.getAmountOut(token1AmountToSell, _reserve1, _reserve0);
+            uint256 nominator = gdexRouter.getAmountOut(token1AmountToSell, _reserve1, _reserve0);
 
-            uint256 denominator = pancakeRouter.quote(
+            uint256 denominator = gdexRouter.quote(
                 token1AmountToSell,
                 _reserve1 + token1AmountToSell,
                 _reserve0 - nominator

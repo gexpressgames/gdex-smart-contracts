@@ -10,7 +10,7 @@ module.exports = {
     "PancakeFactory.sol",
     "PancakePair.sol",
     "PancakeRouter.sol",
-    "PancakeRouter01.sol",
+    "GdexRouter01.sol",
     "utils/MockERC20.sol",
   ],
 };

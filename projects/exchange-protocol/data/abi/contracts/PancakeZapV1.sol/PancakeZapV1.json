@@ -8,7 +8,7 @@
       },
       {
         "internalType": "address",
-        "name": "_pancakeRouter",
+        "name": "_gdexRouter",
         "type": "address"
       },
       {
@@ -362,6 +362,19 @@
   },
   {
     "inputs": [],
+    "name": "gdexRouter",
+    "outputs": [
+      {
+        "internalType": "contract IGdexRouter02",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "maxZapReverseRatio",
     "outputs": [
       {
@@ -379,19 +392,6 @@
     "outputs": [
       {
         "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "pancakeRouter",
-    "outputs": [
-      {
-        "internalType": "contract IPancakeRouter02",
         "name": "",
         "type": "address"
       }

@@ -9,12 +9,12 @@ import './interfaces/IPancakeFactory.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 
-contract PancakeRouter01 is IGdexRouter01 {
+contract GdexRouter01 is IGdexRouter01 {
     address public immutable override factory;
     address public immutable override WETH;
 
     modifier ensure(uint deadline) {
-        require(deadline >= block.timestamp, 'PancakeRouter: EXPIRED');
+        require(deadline >= block.timestamp, 'GdexRouter: EXPIRED');
         _;
     }
 
@@ -46,12 +46,12 @@ contract PancakeRouter01 is IGdexRouter01 {
         } else {
             uint amountBOptimal = PancakeLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, 'PancakeRouter: INSUFFICIENT_B_AMOUNT');
+                require(amountBOptimal >= amountBMin, 'GdexRouter: INSUFFICIENT_B_AMOUNT');
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
                 uint amountAOptimal = PancakeLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, 'PancakeRouter: INSUFFICIENT_A_AMOUNT');
+                require(amountAOptimal >= amountAMin, 'GdexRouter: INSUFFICIENT_A_AMOUNT');
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -111,8 +111,8 @@ contract PancakeRouter01 is IGdexRouter01 {
         (uint amount0, uint amount1) = IPancakePair(pair).burn(to);
         (address token0,) = PancakeLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        require(amountA >= amountAMin, 'PancakeRouter: INSUFFICIENT_A_AMOUNT');
-        require(amountB >= amountBMin, 'PancakeRouter: INSUFFICIENT_B_AMOUNT');
+        require(amountA >= amountAMin, 'GdexRouter: INSUFFICIENT_A_AMOUNT');
+        require(amountB >= amountBMin, 'GdexRouter: INSUFFICIENT_B_AMOUNT');
     }
     function removeLiquidityETH(
         address token,
@@ -185,7 +185,7 @@ contract PancakeRouter01 is IGdexRouter01 {
         uint deadline
     ) external override ensure(deadline) returns (uint[] memory amounts) {
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
     }
@@ -197,7 +197,7 @@ contract PancakeRouter01 is IGdexRouter01 {
         uint deadline
     ) external override ensure(deadline) returns (uint[] memory amounts) {
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'PancakeRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'GdexRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, to);
     }
@@ -208,9 +208,9 @@ contract PancakeRouter01 is IGdexRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'PancakeRouter: INVALID_PATH');
+        require(path[0] == WETH, 'GdexRouter: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsOut(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -221,9 +221,9 @@ contract PancakeRouter01 is IGdexRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'PancakeRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'GdexRouter: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, 'PancakeRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= amountInMax, 'GdexRouter: EXCESSIVE_INPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -235,9 +235,9 @@ contract PancakeRouter01 is IGdexRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[path.length - 1] == WETH, 'PancakeRouter: INVALID_PATH');
+        require(path[path.length - 1] == WETH, 'GdexRouter: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, 'PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(amounts[amounts.length - 1] >= amountOutMin, 'GdexRouter: INSUFFICIENT_OUTPUT_AMOUNT');
         TransferHelper.safeTransferFrom(path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]);
         _swap(amounts, path, address(this));
         IWETH(WETH).withdraw(amounts[amounts.length - 1]);
@@ -250,9 +250,9 @@ contract PancakeRouter01 is IGdexRouter01 {
         ensure(deadline)
         returns (uint[] memory amounts)
     {
-        require(path[0] == WETH, 'PancakeRouter: INVALID_PATH');
+        require(path[0] == WETH, 'GdexRouter: INVALID_PATH');
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= msg.value, 'PancakeRouter: EXCESSIVE_INPUT_AMOUNT');
+        require(amounts[0] <= msg.value, 'GdexRouter: EXCESSIVE_INPUT_AMOUNT');
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
