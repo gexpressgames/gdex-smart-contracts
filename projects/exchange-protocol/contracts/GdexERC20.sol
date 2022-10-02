@@ -8,7 +8,7 @@ contract GdexERC20 is IGdexERC20 {
     using SafeMath for uint256;
 
     string public constant name = "Gdex LPs";
-    string public constant symbol = "Cake-LP";
+    string public constant symbol = "GDEX-LP";
     uint8 public constant decimals = 18;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;

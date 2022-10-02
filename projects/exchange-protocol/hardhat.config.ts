@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-truffle5";
 import "hardhat-abi-exporter";
 import "hardhat-contract-sizer";
 import "solidity-coverage";
+import "@nomiclabs/hardhat-etherscan";
 import "dotenv/config";
 
 const bscTestnet: NetworkUserConfig = {
@@ -23,11 +24,31 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {},
-    // testnet: bscTestnet,
+  testnet: bscTestnet,
     // mainnet: bscMainnet,
   },
+  etherscan: {
+    apiKey: process.env?.BSCSCAN_API_KEY,
+  }, 
+  contractSizer:{
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict:true,
+    only: [":GdexRouter$",":GdexRouterWithPermit$"],
+  },
   solidity: {
+    
     compilers: [
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 99999,
+          },
+        },
+      },
       {
         version: "0.8.4",
         settings: {
@@ -72,6 +93,7 @@ const config: HardhatUserConfig = {
     cache: "./cache",
     artifacts: "./artifacts",
   },
+  
   abiExporter: {
     path: "./data/abi",
     clear: true,

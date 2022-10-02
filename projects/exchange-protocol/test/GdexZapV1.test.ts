@@ -15,39 +15,39 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
   let pairAB;
   let pairBC;
   let pairAC;
-  let pancakeZap;
+  let gdexZap;
   let gdec;
-  let pancakeFactory;
+  let gdexFactory;
   let tokenA;
   let tokenC;
   let wrappedBNB;
 
   before(async () => {
     // Deploy Factory
-    pancakeFactory = await GdexFactory.new(alice, { from: alice });
+    gdexFactory = await GdexFactory.new(alice, { from: alice });
 
     // Deploy Wrapped BNB
     wrappedBNB = await WBNB.new({ from: alice });
 
     // Deploy Router
-    gdec = await GdexRouter.new(pancakeFactory.address, wrappedBNB.address, { from: alice });
+    gdec = await GdexRouter.new(gdexFactory.address, wrappedBNB.address, { from: alice });
 
     // Deploy ZapV1
     maxZapReverseRatio = 100; // 1%
-    pancakeZap = await GdexZapV1.new(wrappedBNB.address, gdec.address, maxZapReverseRatio, { from: alice });
+    gdexZap = await GdexZapV1.new(wrappedBNB.address, gdec.address, maxZapReverseRatio, { from: alice });
 
     // Deploy ERC20s
     tokenA = await MockERC20.new("Token A", "TA", parseEther("10000000"), { from: alice });
     tokenC = await MockERC20.new("Token C", "TC", parseEther("10000000"), { from: alice });
 
     // Create 3 LP tokens
-    let result = await pancakeFactory.createPair(tokenA.address, wrappedBNB.address, { from: alice });
+    let result = await gdexFactory.createPair(tokenA.address, wrappedBNB.address, { from: alice });
     pairAB = await GdexPair.at(result.logs[0].args[2]);
 
-    result = await pancakeFactory.createPair(wrappedBNB.address, tokenC.address, { from: alice });
+    result = await gdexFactory.createPair(wrappedBNB.address, tokenC.address, { from: alice });
     pairBC = await GdexPair.at(result.logs[0].args[2]);
 
-    result = await pancakeFactory.createPair(tokenA.address, tokenC.address, { from: alice });
+    result = await gdexFactory.createPair(tokenA.address, tokenC.address, { from: alice });
     pairAC = await GdexPair.at(result.logs[0].args[2]);
 
     assert.equal(String(await pairAB.totalSupply()), parseEther("0").toString());
@@ -63,7 +63,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         from: thisUser,
       });
 
-      await tokenA.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await tokenA.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
@@ -71,7 +71,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         from: thisUser,
       });
 
-      await tokenC.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await tokenC.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
@@ -79,19 +79,19 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         from: thisUser,
       });
 
-      await wrappedBNB.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await wrappedBNB.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
-      await pairAB.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await pairAB.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
-      await pairBC.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await pairBC.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
 
-      await pairAC.approve(pancakeZap.address, constants.MAX_UINT256, {
+      await pairAC.approve(gdexZap.address, constants.MAX_UINT256, {
         from: thisUser,
       });
     }
@@ -187,13 +187,13 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const tokenToZap = tokenA.address;
       const tokenAmountIn = parseEther("1");
 
-      const estimation = await pancakeZap.estimateZapInSwap(tokenToZap, parseEther("1"), lpToken);
+      const estimation = await gdexZap.estimateZapInSwap(tokenToZap, parseEther("1"), lpToken);
       assert.equal(estimation[2], tokenC.address);
 
       // Setting up slippage at 0.5%
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapInToken(tokenToZap, tokenAmountIn, lpToken, minTokenAmountOut, {
+      const result = await gdexZap.zapInToken(tokenToZap, tokenAmountIn, lpToken, minTokenAmountOut, {
         from: carol,
       });
 
@@ -212,22 +212,22 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       });
 
       assert.equal(String(await pairAC.balanceOf(carol)), parseEther("0.499373703104732887").toString());
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("User completes zapIn with BNB (pair BNB/tokenC)", async function () {
       const lpToken = pairBC.address;
       const tokenAmountIn = parseEther("1");
 
-      const estimation = await pancakeZap.estimateZapInSwap(wrappedBNB.address, parseEther("1"), lpToken);
+      const estimation = await gdexZap.estimateZapInSwap(wrappedBNB.address, parseEther("1"), lpToken);
       assert.equal(estimation[2], tokenC.address);
 
       // Setting up slippage at 0.5%
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapInBNB(lpToken, minTokenAmountOut, {
+      const result = await gdexZap.zapInBNB(lpToken, minTokenAmountOut, {
         from: carol,
         value: tokenAmountIn.toString(),
       });
@@ -240,9 +240,9 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         user: carol,
       });
 
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("User completes zapInRebalancing with BNB (pair BNB/tokenC)", async function () {
@@ -250,7 +250,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const token0AmountIn = parseEther("1"); // 1 BNB
       const token1AmountIn = parseEther("50"); // 50 token C
 
-      const estimation = await pancakeZap.estimateZapInRebalancingSwap(
+      const estimation = await gdexZap.estimateZapInRebalancingSwap(
         wrappedBNB.address,
         tokenC.address,
         token0AmountIn,
@@ -264,7 +264,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
       const maxTokenAmountIn = new BN(estimation[0].toString()).mul(new BN("10005")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapInBNBRebalancing(
+      const result = await gdexZap.zapInBNBRebalancing(
         tokenC.address,
         token1AmountIn,
         lpToken,
@@ -287,9 +287,9 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         user: carol,
       });
 
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("User completes zapInRebalancing with tokens (tokenA/tokenC)", async function () {
@@ -297,7 +297,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const token0AmountIn = parseEther("1000"); // 1000 token A
       const token1AmountIn = parseEther("5000"); // 5000 token C
 
-      const estimation = await pancakeZap.estimateZapInRebalancingSwap(
+      const estimation = await gdexZap.estimateZapInRebalancingSwap(
         tokenA.address,
         tokenC.address,
         token0AmountIn,
@@ -311,7 +311,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
       const maxTokenAmountIn = new BN(estimation[0].toString()).mul(new BN("10005")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapInTokenRebalancing(
+      const result = await gdexZap.zapInTokenRebalancing(
         tokenA.address,
         tokenC.address,
         token0AmountIn,
@@ -335,9 +335,9 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         user: carol,
       });
 
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("User completes zapOut to token (tokenA/tokenC)", async function () {
@@ -345,12 +345,12 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const lpTokenAmount = parseEther("1");
       const tokenToReceive = tokenA.address;
 
-      const estimation = await pancakeZap.estimateZapOutSwap(lpToken, lpTokenAmount, tokenToReceive);
+      const estimation = await gdexZap.estimateZapOutSwap(lpToken, lpTokenAmount, tokenToReceive);
       assert.equal(estimation[2], tokenC.address);
 
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapOutToken(lpToken, tokenToReceive, lpTokenAmount, minTokenAmountOut, {
+      const result = await gdexZap.zapOutToken(lpToken, tokenToReceive, lpTokenAmount, minTokenAmountOut, {
         from: carol,
       });
 
@@ -362,9 +362,9 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         user: carol,
       });
 
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("User completes zapOut to BNB (BNB/tokenC)", async function () {
@@ -372,12 +372,12 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       const lpTokenAmount = parseEther("1");
       const tokenToReceive = wrappedBNB.address;
 
-      const estimation = await pancakeZap.estimateZapOutSwap(lpToken, lpTokenAmount, tokenToReceive);
+      const estimation = await gdexZap.estimateZapOutSwap(lpToken, lpTokenAmount, tokenToReceive);
       assert.equal(estimation[2], tokenC.address);
 
       const minTokenAmountOut = new BN(estimation[1].toString()).mul(new BN("9995")).div(new BN("10000"));
 
-      const result = await pancakeZap.zapOutBNB(lpToken, lpTokenAmount, minTokenAmountOut, {
+      const result = await gdexZap.zapOutBNB(lpToken, lpTokenAmount, minTokenAmountOut, {
         from: carol,
       });
 
@@ -389,18 +389,18 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         user: carol,
       });
 
-      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(pancakeZap.address)), 18));
-      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(pancakeZap.address)), 18));
+      console.info("Balance tokenA: " + formatUnits(String(await tokenA.balanceOf(gdexZap.address)), 18));
+      console.info("Balance WBNB: " + formatUnits(String(await wrappedBNB.balanceOf(gdexZap.address)), 18));
+      console.info("Balance tokenC: " + formatUnits(String(await tokenC.balanceOf(gdexZap.address)), 18));
     });
 
     it("Zap estimation fail if wrong tokens", async function () {
       await expectRevert(
-        pancakeZap.estimateZapInSwap(wrappedBNB.address, parseEther("1"), pairAC.address),
+        gdexZap.estimateZapInSwap(wrappedBNB.address, parseEther("1"), pairAC.address),
         "Zap: Wrong tokens"
       );
       await expectRevert(
-        pancakeZap.estimateZapInRebalancingSwap(
+        gdexZap.estimateZapInRebalancingSwap(
           tokenA.address,
           wrappedBNB.address,
           parseEther("1"),
@@ -411,7 +411,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       );
 
       await expectRevert(
-        pancakeZap.estimateZapInRebalancingSwap(
+        gdexZap.estimateZapInRebalancingSwap(
           wrappedBNB.address,
           tokenA.address,
           parseEther("1"),
@@ -421,7 +421,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         "Zap: Wrong token0"
       );
       await expectRevert(
-        pancakeZap.estimateZapInRebalancingSwap(
+        gdexZap.estimateZapInRebalancingSwap(
           tokenA.address,
           tokenA.address,
           parseEther("1"),
@@ -432,21 +432,21 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       );
 
       await expectRevert(
-        pancakeZap.estimateZapOutSwap(pairAC.address, parseEther("1"), wrappedBNB.address),
+        gdexZap.estimateZapOutSwap(pairAC.address, parseEther("1"), wrappedBNB.address),
         "Zap: Token not in LP"
       );
     });
 
     it("Zap estimations work as expected", async function () {
       // Verify estimations are the same regardless of the argument ordering
-      const estimation0 = await pancakeZap.estimateZapInRebalancingSwap(
+      const estimation0 = await gdexZap.estimateZapInRebalancingSwap(
         tokenA.address,
         tokenC.address,
         parseEther("0.5"),
         parseEther("1"),
         pairAC.address
       );
-      const estimation1 = await pancakeZap.estimateZapInRebalancingSwap(
+      const estimation1 = await gdexZap.estimateZapInRebalancingSwap(
         tokenC.address,
         tokenA.address,
         parseEther("1"),
@@ -459,8 +459,8 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       assert.equal(!estimation0[2], estimation1[2]);
 
       // Verify estimations are the same for zapIn and zapInRebalancing with 0 for one of the quantity
-      const estimation2 = await pancakeZap.estimateZapInSwap(tokenA.address, parseEther("5"), pairAC.address);
-      const estimation3 = await pancakeZap.estimateZapInRebalancingSwap(
+      const estimation2 = await gdexZap.estimateZapInSwap(tokenA.address, parseEther("5"), pairAC.address);
+      const estimation3 = await gdexZap.estimateZapInRebalancingSwap(
         tokenA.address,
         tokenC.address,
         parseEther("5"),
@@ -474,26 +474,26 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
     it("Cannot zap if wrong direction/tokens used", async function () {
       await expectRevert(
-        pancakeZap.zapInToken(tokenA.address, parseEther("1"), pairBC.address, parseEther("0.51"), { from: carol }),
+        gdexZap.zapInToken(tokenA.address, parseEther("1"), pairBC.address, parseEther("0.51"), { from: carol }),
         "Zap: Wrong tokens"
       );
       await expectRevert(
-        pancakeZap.zapInBNB(pairAC.address, parseEther("0.51"), { from: carol, value: parseEther("0.51").toString() }),
+        gdexZap.zapInBNB(pairAC.address, parseEther("0.51"), { from: carol, value: parseEther("0.51").toString() }),
         "Zap: Wrong tokens"
       );
 
       await expectRevert(
-        pancakeZap.zapOutToken(pairBC.address, tokenA.address, parseEther("0.51"), parseEther("0.51"), { from: carol }),
+        gdexZap.zapOutToken(pairBC.address, tokenA.address, parseEther("0.51"), parseEther("0.51"), { from: carol }),
         "Zap: Token not in LP"
       );
 
       await expectRevert(
-        pancakeZap.zapOutBNB(pairAC.address, parseEther("0.51"), parseEther("0.51"), { from: carol }),
+        gdexZap.zapOutBNB(pairAC.address, parseEther("0.51"), parseEther("0.51"), { from: carol }),
         "Zap: Token not in LP"
       );
 
       await expectRevert(
-        pancakeZap.zapInTokenRebalancing(
+        gdexZap.zapInTokenRebalancing(
           tokenA.address,
           tokenC.address,
           parseEther("1"),
@@ -508,7 +508,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       );
 
       await expectRevert(
-        pancakeZap.zapInTokenRebalancing(
+        gdexZap.zapInTokenRebalancing(
           tokenC.address,
           tokenA.address,
           parseEther("1"),
@@ -523,7 +523,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       );
 
       await expectRevert(
-        pancakeZap.zapInTokenRebalancing(
+        gdexZap.zapInTokenRebalancing(
           tokenC.address,
           tokenC.address,
           parseEther("1"),
@@ -538,7 +538,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       );
 
       await expectRevert(
-        pancakeZap.zapInBNBRebalancing(
+        gdexZap.zapInBNBRebalancing(
           tokenC.address,
           parseEther("1"),
           pairAB.address,
@@ -550,7 +550,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
         "Zap: Wrong token1"
       );
       await expectRevert(
-        pancakeZap.zapInBNBRebalancing(
+        gdexZap.zapInBNBRebalancing(
           tokenA.address,
           parseEther("1"),
           pairAC.address,
@@ -567,7 +567,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
       expectEvent(result, "Deposit", { dst: david, wad: parseEther("1").toString() });
 
       await expectRevert(
-        pancakeZap.zapInBNBRebalancing(
+        gdexZap.zapInBNBRebalancing(
           wrappedBNB.address,
           parseEther("1"),
           pairBC.address,
@@ -581,7 +581,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
       // TokenC (token0) > BNB (token1) --> sell token1 (should be false)
       await expectRevert(
-        pancakeZap.zapInBNBRebalancing(
+        gdexZap.zapInBNBRebalancing(
           tokenC.address,
           parseEther("0.05"),
           pairBC.address,
@@ -595,7 +595,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
       // TokenC (token0) < BNB (token1) --> sell token0 (should be true)
       await expectRevert(
-        pancakeZap.zapInBNBRebalancing(
+        gdexZap.zapInBNBRebalancing(
           tokenC.address,
           parseEther("0.0000000001"),
           pairBC.address,
@@ -609,7 +609,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
       // TokenA (token0) > tokenC (token1) --> sell token0 (should be true)
       await expectRevert(
-        pancakeZap.zapInTokenRebalancing(
+        gdexZap.zapInTokenRebalancing(
           tokenA.address,
           tokenC.address,
           parseEther("1"),
@@ -625,7 +625,7 @@ contract("GdexZapV1", ([alice, bob, carol, david, erin]) => {
 
       // TokenA (token0) < tokenC (token1) --> sell token0 (should be true)
       await expectRevert(
-        pancakeZap.zapInTokenRebalancing(
+        gdexZap.zapInTokenRebalancing(
           tokenA.address,
           tokenC.address,
           parseEther("0"),

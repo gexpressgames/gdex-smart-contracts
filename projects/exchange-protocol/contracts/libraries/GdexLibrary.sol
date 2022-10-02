@@ -29,7 +29,7 @@ library GdexLibrary {
                         hex"ff",
                         factory,
                         keccak256(abi.encodePacked(token0, token1)),
-                        hex"d09220a1fd8590c5f01fc1637a664f2ea207c37b2bde04dbcd8ec1b47038c191" // init code hash
+                        hex"6d7580aa1c375badacf0d65e4929dd4c16487f89e1989c60a2654bf2b4357a1e" // init code hash
                     )
                 )
             )

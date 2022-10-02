@@ -1,4 +1,5 @@
 import { ethers, network, run } from "hardhat";
+
 import config from "../config";
 
 const main = async () => {
@@ -43,6 +44,18 @@ const main = async () => {
   await gdexZap.deployed();
 
   console.log("GdexZap V1 deployed to:", gdexZap.address);
+  try {
+    await run("verify", {
+        address: gdexZap.address,
+        constructorArguments: [
+          config.WBNB[networkName],
+          config.GdexRouter[networkName],
+          config.MaxZapReverseRatio[networkName]],
+    });
+  } catch (e: any) {
+    console.error(`error in verifying: ${e.message}`);
+  }
+
 };
 
 main()
